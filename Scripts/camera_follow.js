@@ -1,50 +1,30 @@
 ﻿#pragma strict
 
-//public var camera : GameObject;
-var camera : GameObject;
-var Player : GameObject;
-private var leftSide = Screen.width;
+var target : Transform;
+var distance = 10;
+var height = 0;
+var smooth :float = 1.5;
+var increaseView : float = 8;
 
-private var thisTransform : Transform;
-private var cameraChange : boolean = true;
 
-function Start () {
-	Player = GameObject.Find("MainPlayer");
-}
+function FixedUpdate () {
+	var GUIScript : scoreManager = FindObjectOfType(scoreManager);
 
-function Update () {
-	if(cameraChange){
-	    transform.position.x = Player.transform.position.x;
-		transform.position.y = Player.transform.position.y;
-	} else if(!cameraChange) {
-		
-		transform.position.x = Player.transform.position.x + 15;
-		transform.position.y = Player.transform.position.y;
-		Debug.Log(leftSide);
-		Debug.Log(Player.transform.position.x);
+	if(GUIScript.gameStart){
+		var playerScript : player_controller = FindObjectOfType(player_controller);
+		var wantedPosition = target.TransformPoint(0, height, -distance);
+
+		if(Input.GetAxis("Horizontal") && playerScript.doubleSpeed){
+			wantedPosition = target.TransformPoint(20, height, -distance);
+		} else if(Input.GetAxis("Horizontal")) {
+
+			wantedPosition = target.TransformPoint(increaseView, height, -distance);
+		}
+		if(playerScript.CameraChangeLeft){
+			wantedPosition = target.TransformPoint(5, 3, -15);
+			transform.position = Vector3.Slerp (transform.position, wantedPosition, Time.deltaTime * smooth);
+		}else {
+			transform.position = Vector3.Slerp (transform.position, wantedPosition, Time.deltaTime * 1);
+		}
 	}
 }
-
-function OnTriggerEnter (other : Collider){
-	if(other.tag == "cameraLeft") {
-		cameraChange = false;
-
-	}
-}
-
-function OnTriggerExit(other : Collider){
-	/*if(other.tag == "cameraLeft") {
-		cameraChange = true ;
-		transform.position.x = Player.transform.position.x * Time.deltaTime;
-	}*/
-}
-/*
-function Start () {
-	target = GameObject.Find("MainPlayer");
-}
-
-function Update () {
-	transform.position.x = target.transform.position.x+1;
-	transform.position.y = target.transform.position.y+1;
-}
-*/
