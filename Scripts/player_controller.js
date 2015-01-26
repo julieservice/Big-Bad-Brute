@@ -1,8 +1,8 @@
 ﻿#pragma strict
 
-PlayerPrefs.SetInt("Player Score", 10);
+//-------------Player Variables-------------//
 
-
+public var feetCheck : GameObject;
 
 public var totalHealth : int = 10;
 public var playerHealth : int = 5;
@@ -26,20 +26,26 @@ private var slowerSpeedTimer : float = 10;
 public var jumpHeight : float;
 public var doubleJumpHeight : float;
 
-
-
 var onLadder : boolean = false;
+var weapon : GameObject;
 
-var chPosition : Transform;
-//-------------Camera Position Changes-------------//
+var attacking : boolean = false;
+
+var dustDirection : boolean;
+var emissionSpeed : float = 0;
+//-------------Camera Position Variables-------------//
+
 public var CameraChangeLeft : boolean = false;
 
 
 
 
 function Start(){
+	PlayerPrefs.SetInt("Player Score", 10);
 	rigidbody.useGravity = false;
+	weapon = gameObject.Find("weapon");
 	save();
+
 }
 
 //-------------Call to this function to save at any time-------------//
@@ -57,37 +63,59 @@ function Update () {
 	rigidbody.AddForce(new Vector3(0, -gravity * rigidbody.mass,0)); //custom gravity formula
 	
 	if(GUIScript.gameStart){
-	//-------------Speed and Movement-------------//
+
+		emissionSpeed = 25;
+
+		//-------------Double Speed, Slow Speed and Regular Speed-------------//
+		// Double Speed
 		if (doubleSpeed) {
 			doubleSpeedTimer -= Time.deltaTime * 2;
 			if (doubleSpeedTimer<=0){
 				Debug.Log('double Speed off');
 				doubleSpeed = false;
 			}
-			rigidbody.velocity.x = (speed * 2.5) * Input.GetAxis("Horizontal"); //left-1, right+1, default 0
+			if (isGrounded()){
+				Dust(false);
+			}
+			rigidbody.velocity.x = (speed * 2.5) * Input.GetAxis("Horizontal");
+
+		// Slow Speed
 		} else if (slowerSpeed) {
 			slowerSpeedTimer -= Time.deltaTime * 2;
 			if (slowerSpeedTimer<=0){
 				Debug.Log('double Speed off');
 				slowerSpeed = false;
 			}
-			rigidbody.velocity.x = (speed / 1.5) * Input.GetAxis("Horizontal"); //left-1, right+1, default 0
-		} else {
-			rigidbody.velocity.x = speed * Input.GetAxis("Horizontal"); //left-1, right+1, default 0
-		}
+			rigidbody.velocity.x = (speed / 1.5) * Input.GetAxis("Horizontal");
 
+		// Regular Speed
+		} else if(Input.GetAxis("Horizontal")) {
+			if (isGrounded()){
+				Dust(false);
+			} else {
+				feetCheck.particleSystem.emissionRate = 0;
+			}
+			rigidbody.velocity.x = speed * Input.GetAxis("Horizontal");
+		} else {
+			feetCheck.particleSystem.emissionRate = 0;
+			rigidbody.velocity.x = 0;
+		}
 
 		//-------------Character Rotation-------------//
+
+		//Scales the character on the x axis
+
 		if((Input.GetAxis("Horizontal") < 0) && movingRight){
-			transform.localScale = new Vector3(-transform.localScale.x,transform.localScale.y,transform.localScale.z);
-			movingRight = false;
+			RotateCharacter();
+			movingRight = !movingRight;
 		}else if ((Input.GetAxis("Horizontal") > 0) && !movingRight ){
-			transform.localScale = new Vector3(-transform.localScale.x,transform.localScale.y,transform.localScale.z);
-			movingRight = true;
+			RotateCharacter();
+			movingRight = !movingRight;
+
 		}
 	 
+		//-------------Character Jump and Double Jump-------------//
 
-		//-------------Character Jump-------------//
 		if(Input.GetKeyDown("space") && isGrounded()){
 			rigidbody.velocity.y = jumpHeight;
 			jumpCount = true;
@@ -96,17 +124,115 @@ function Update () {
 			jumpCount = false;
 		}
 
+		//-------------Attach to ladders-------------//
+
+		///////////////////////////////////////// Not Implemented
+
 		if(onLadder && Input.GetKeyDown("w")){
 			transform.position += Vector3.up;
 			gravity = 0;
 		} else {
 			gravity = 35;
 		}
+
+
+		//---------------Fall Damage-------------//
+
+		///////////////////////////////////////// Not Implemented
+
+
+		//FALL DAMAGE
+		if (rigidbody.velocity == -45){
+			Debug.Log('owwwww');
+		}
+
+		if(Input.GetKeyDown("e")){
+			attacking = true;
+			weapon.collider.enabled = true;
+		}
+
+		if (Input.GetKeyUp("e")){
+			//attackDown = false;
+			weapon.collider.enabled = false;
+		}
+
+
+
+		//--------no life left--------/
+		if (playerHealth==0 && playerLives>=1){
+			//this.transform = Vector3(0,0,0);
+			playerHealth = totalHealth;
+			playerLives--;
+		}
+	} else {
+		feetCheck.particleSystem.emissionRate = 0;
 	}
 }
 
 
+function RotateCharacter(){
+	transform.localScale = new Vector3(-transform.localScale.x,transform.localScale.y,transform.localScale.z);
+}
+
+//-------------Dust Trail at his feet-------------//
+
+function Dust(rotate){
+	if (rotate){
+
+	} else {
+		feetCheck.particleSystem.emissionRate = emissionSpeed;
+	}
+	
+	//feetCheck.particlesystem.enableEmission = true;
+
+
+	//DustRotate
+	/*
+	var dustParticle : GameObject;
+	dustParticle = Instantiate(Resources.Load('Prefabs/Particles/Dust'), transform.position, transform.rotation);
+
+	
+	var playerFeet  = GameObject.Find("groundCheck");
+	var newScale : float = Mathf.Lerp(0.2, 1,  Time.deltaTime * 40);
+
+	
+	if (rotate){
+		dustParticle = Instantiate(Resources.Load('Prefabs/Particles/DustRotate'), transform.position, transform.rotation);
+		dustParticle.transform.position = new Vector3(playerFeet.transform.position.x + 1, playerFeet.transform.position.y, 0);
+		if (dustDirection){
+			dustParticle.transform.position = new Vector3(playerFeet.transform.position.x + 1, playerFeet.transform.position.y, 0);
+			dustParticle.transform.rotation *= Quaternion.AngleAxis( 180, transform.up );
+			dustParticle.rigidbody.velocity = Vector3(-3,4,0);
+			dustDirection = !dustDirection;
+		} else {
+			dustParticle.transform.position = new Vector3(playerFeet.transform.position.x - 1, playerFeet.transform.position.y, 0);
+			dustParticle.rigidbody.velocity = Vector3(3,4,0);
+			dustDirection = !dustDirection;
+		}
+	} else {
+		dustParticle = Instantiate(Resources.Load('Prefabs/Particles/Dust'), transform.position, transform.rotation);
+		if (dustDirection){
+			dustParticle.transform.position = new Vector3(playerFeet.transform.position.x + 1, playerFeet.transform.position.y, 0);
+		} else {
+			dustParticle.transform.position = new Vector3(playerFeet.transform.position.x - 1, playerFeet.transform.position.y, 0);
+		}
+	}
+	
+	dustParticle.transform.localScale = Vector3(newScale, newScale, newScale);
+	dustParticle.rigidbody.AddForce(0,30,0);
+	*/
+    
+}
+
 function OnTriggerEnter(other : Collider){
+
+	//enabling the cinematic camera
+
+	if(rigidbody.velocity.y < -0.1 && other.tag == "head"){
+			Debug.Log('boop');
+	}
+
+
 	if(other.tag == "cameraLeft") {
 		CameraChangeLeft = true;
 	}
@@ -115,9 +241,18 @@ function OnTriggerEnter(other : Collider){
 		onLadder = true;
 		Debug.Log('enter');
 	}
+
+	//player gets hurt
+
+	if(other.tag == "hurt") {
+		Attack();
+	}
 }
 
 function OnTriggerExit(other : Collider){
+
+	//resets cinematic camera
+
 	if(other.tag == "cameraLeft") {
 		CameraChangeLeft = false;
 	}
@@ -128,8 +263,15 @@ function OnTriggerExit(other : Collider){
 	}
 }
 
+function Attack(){
+	if (playerHealth>=0 && playerLives>=0){
+		playerHealth--;
+		Debug.Log('stoppppppp');
+	}
+}
 
 //-------------Is Grounded Check-------------//
+
 function isGrounded(){
 	var front : Vector3 = transform.position;
 	front.x += 0.4;

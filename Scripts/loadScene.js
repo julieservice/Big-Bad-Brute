@@ -1,6 +1,5 @@
 #pragma strict
  
- function LoadScene ()
- {
+function LoadScene (){
      Application.LoadLevel("mainScene");
- }
+}

@@ -1,7 +1,25 @@
 #pragma strict
 //UI elements
 var timerUI : UI.Text;
+var startTimerUI : UI.Text;
+var livesUI : UI.Text;
 var scoreUI : UI.Text;
+var gameOverUI : UI.Text;
+
+var health : float;
+var healthTotal : float;
+var HealthBar : RectTransform;
+var healthScript : Canvas;
+
+var gameUI : Canvas;
+
+var gameOverScreen : Canvas;
+private var resume : RectTransform;
+public var pauseToggle : boolean = true;
+
+
+
+var lives : int;
 
 //points mulitpliers
 var doublePtsOn : boolean = false; 
@@ -18,15 +36,40 @@ var gameStart : boolean = false;
 var incomingScore : float;
 var score : float;
 
+
+
 //wanted levels
 //var wantedUp : float = 1;
 var wantedLevels : float = 1;
 
 function Start() {
-  
+  healthScript = GameObject.Find("Health").GetComponent(Canvas);
+  resume = GameObject.Find("Resume").GetComponent(RectTransform);
 }
 
 function Update(){
+  
+  if (Input.GetKeyDown(KeyCode.Escape)) {
+    pauseToggle = !pauseToggle;
+  }
+
+  if(pauseToggle){
+    Time.timeScale = 1;
+    gameUI.enabled = true;
+    gameOverScreen.enabled = false;
+  } else {
+    resume.anchoredPosition3D = Vector3(13,-100,0);
+    Time.timeScale = 0;
+    gameUI.enabled = false;
+    gameOverScreen.enabled = true;
+    gameOverUI.text = "Pause";
+  }
+
+
+
+
+  var playerScript : player_controller = FindObjectOfType(player_controller);
+
   //-------------Wanted Levels-------------//
 
   if(wantedLevels){
@@ -34,10 +77,6 @@ function Update(){
   } else if(wantedLevels==2){
 
   }
-
-  //-------------Health-------------//
-
-
 
   //-------------Score-------------//
 
@@ -75,24 +114,45 @@ function Update(){
   }
 
 
-  //-------------Timer-------------//
+//-------------Timer-------------//
 
   //Wait til the start timer runs out
   if(startTimer>0){
+  
+  //-------------Start Timer Countdown-------------//
+
     startTimer -= Time.deltaTime;
-    timerUI.fontSize = 50;
-    timerUI.text = "Game Starts in : " + startTimer.ToString("0");
+    startTimerUI.color = Color.white;
+    startTimerUI.fontSize = 35;
+    startTimerUI.text = "Game Starts in : " + startTimer.ToString("0");
+    
+    healthScript.enabled = false;
+    timerUI.enabled = false;
+    livesUI.enabled = false;
+    scoreUI.enabled = false;
+    gameOverScreen.enabled = false;
   }
 
   //5 seconds before the game starts to give the player some time
+
   if(startTimer<=0){
+
+    //-------------Game Timer Countdown-------------//
+
+    healthScript.enabled = true;
+    scoreUI.enabled = true;
+
+
+
+    startTimerUI.enabled = false;
     timerUI.fontSize = 24;
+    timerUI.enabled = true;
     gameStart = true;
 	  timer -= Time.deltaTime;
     var minutes : int = timer / 60;
     var seconds : int = timer % 60;
     var gameTimer = String.Format ("{0:00}:{1:00}", minutes, seconds);
-    timerUI.color = Color.grey;
+    timerUI.color = Color.white;
 
     //1 minute warning
     if(timer<=60 && timer>=58){
@@ -101,16 +161,47 @@ function Update(){
 
     //no time left
     if(timer<=0){
-      timerUI.color = Color.red;
+      
       timerUI.text = "Game Over";
     }
 
     //standard 
     if (timer>0){
       timerUI.text = "Time: " + gameTimer;
+    }
+
+    //-------------Health-------------//
+
+    health = playerScript.playerHealth;
+    healthTotal = playerScript.totalHealth;
+    var healthRemaining = (health - healthTotal);
+    var healthPercent = (healthRemaining/healthTotal);
+    var healthPosition = (healthPercent * 2500.0);
+    HealthBar.localPosition = new Vector3(healthPosition, 0, 0);
+
+    //-------------Lives-------------//
     
-  	}
+    lives = playerScript.playerLives;
+    livesUI.enabled = true;
+    livesUI.text = "Lives: " + lives;
   }
+
+  //-------------Game Over-------------//
+
+  //if the player runs out of lives or the time runs out then the game is over
+  if(playerScript.playerLives<=0 || timer<=0){
+    gameOverUI.text = "Game Over";
+    gameStart = false;
+    playerScript.rigidbody.velocity.x = 0;
+    gameUI.enabled = false;
+    gameOverScreen.enabled = true;
+    resume.anchoredPosition3D = Vector3(0,100000,0);
+    
+  }
+}
+
+function Restart(){
+  Debug.Log("restart");
 }
 
 function WantedStars(stars){
